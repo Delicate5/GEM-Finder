@@ -6,7 +6,7 @@ import a_data_handler as dh
 import a_assembly_liftover as al
 import b_data_processor as dp
 import b_pvalue_maker as pm
-import c_data_analyzer as da
+import a_GEM-finder as da
 
 def main(argv):
 	for output_d in ['data_processor', 'pvalue_maker']: path_checker(output_d)
