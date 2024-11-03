@@ -1,5 +1,4 @@
 # GEM-Finder
-GEM-Finder
 ==========
 Framework briefing. Also contain permutation test scripts.
 
