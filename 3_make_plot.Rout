@@ -1,0 +1,687 @@
+
+R version 4.1.2 (2021-11-01) -- "Bird Hippie"
+Copyright (C) 2021 The R Foundation for Statistical Computing
+Platform: x86_64-conda-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> #!/home/ajl1213/anaconda2/envs/r_plot/bin/R
+> 
+> 
+> 
+> library(pheatmap)
+Warning message:
+package ‘pheatmap’ was built under R version 4.1.3 
+> library(ggplot2)
+> library(RColorBrewer)
+Warning message:
+package ‘RColorBrewer’ was built under R version 4.1.3 
+> library(viridis)
+Loading required package: viridisLite
+> 
+> 
+> dir.create('Plots')
+Warning message:
+In dir.create("Plots") : 'Plots' already exists
+> 
+> resolution <- '20kb'
+> 
+> sample_list <- c(
++ 'hESC',
++ 'ME',
++ 'EC4',
++ 'EC12',
++ 'EC24',
++ 'EC48',
++ 'nonEC12',
++ 'nonEC48'
++ )
+> 
+> 
+> ##================================================================================================
+> ## siginter type
+> data1 <- read.table('res_fithic/siginter.20kb.merged.txt', header=T)
+> 
+> ##
+> pdf('Plots/siginter.nsample.bar.pdf')
+> barplot(table(data1$nsample), xlab='number of samples', ylab='number of sig inter')
+> dev.off()
+null device 
+          1 
+> 
+> ## 3d piechart
+> library(plotrix)
+> 
+> #
+> table <- data.frame(table(data1$inter_type))
+> table$frac <- round(table$Freq / sum(table$Freq) * 100, digits=2)
+> table$inter_type <- paste0(table$Var1, ' (', table$frac, '%)')
+> 
+> #
+> col_list <- c(brewer.pal(8, 'Accent')[c(5, 3)])
+> pdf('Plots/siginter.inter_type.3d_pie.pdf')
+> pie3D(rev(table$frac), labels=rev(table$inter_type), radius=1,  explode=0.08, col=rev(col_list))
+> dev.off()
+null device 
+          1 
+> 
+> 
+> ##================================================================================================
+> ## inter class barplot
+> 
+> my_theme <- theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
++         theme(panel.background = element_rect(fill='white', color='black', linetype='solid')) +
++         theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
++         theme(legend.position='bottom')
+> 
+> ## static inter
+> merged_df <- NULL
+> for (sample in sample_list){
++ 	print(sample)
++ 
++ 	data1 <- read.table(paste0('res_fithic/',sample,'.',resolution,'.sig_inter.filtered.anno.txt'), header=T)
++ 	tmp_df <- data.frame(inter_id=data1$inter_id, inter_dir=data1$inter_dir, inter_class=data1$inter_class, inter_type=data1$inter_type, dist=data1$dist, sample=sample)
++ 
++ 	merged_df <- rbind(merged_df, tmp_df)
++ }
+[1] "hESC"
+[1] "ME"
+[1] "EC4"
+[1] "EC12"
+[1] "EC24"
+[1] "EC48"
+[1] "nonEC12"
+[1] "nonEC48"
+> 
+> ##
+> count_table <- as.matrix(table(merged_df$sample, merged_df$inter_class))
+> 
+> get_frac <- function(x){x / sum(x) * 100}
+> frac_mat <- t(apply(count_table, 1, get_frac))
+> 
+> df <- as.data.frame(as.table(frac_mat))
+> colnames(df) <- c('sample','inter_class','frac')
+> 
+> df$sample <- factor(df$sample, levels=sample_list)
+> df$inter_class <- factor(df$inter_class, levels=c('peak_prom', 'peak_none', 'none_none'))
+> 
+> print(df)
+    sample inter_class      frac
+1     EC12   none_none 43.499495
+2     EC24   none_none 43.786903
+3      EC4   none_none 43.636322
+4     EC48   none_none 44.687354
+5     hESC   none_none 48.272073
+6       ME   none_none 43.156486
+7  nonEC12   none_none 42.969707
+8  nonEC48   none_none 44.198832
+9     EC12   peak_none 46.637245
+10    EC24   peak_none 46.699650
+11     EC4   peak_none 46.149881
+12    EC48   peak_none 45.734188
+13    hESC   peak_none 43.029795
+14      ME   peak_none 46.368514
+15 nonEC12   peak_none 47.129677
+16 nonEC48   peak_none 46.399355
+17    EC12   peak_prom  9.863260
+18    EC24   peak_prom  9.513447
+19     EC4   peak_prom 10.213797
+20    EC48   peak_prom  9.578458
+21    hESC   peak_prom  8.698132
+22      ME   peak_prom 10.474999
+23 nonEC12   peak_prom  9.900616
+24 nonEC48   peak_prom  9.401813
+> 
+> #
+> colors <- rev(c('lightgrey','darkgrey','black'))
+> 
+> g1 <- ggplot(df) +
++     geom_bar(aes(x=sample, y=frac, fill=inter_class), stat='identity') +
++     scale_fill_manual(values=colors) +
++     labs(x='', y='Composition of siginter') +
++     my_theme
+> 
+> pdf('Plots/siginter.inter_class.bar.pdf')
+> plot(g1)
+> dev.off()
+null device 
+          1 
+> 
+> 
+> ##================================================================================================
+> ## peak composition of sig inters
+> stage_list <- c('hESC','Mesoderm','EarlyEC','MidEC','LateEC','FullEC','MidNonEC','FullNonEC')
+> 
+> for (datatype in c('static','variable')){
++ 	print(datatype)
++ 
++ 	anno_df <- read.table('anno_res/sig_inter.peak_label.txt', header=T)
++ 	anno_df <- anno_df[anno_df$peak_label %in% stage_list, ]
++ 	anno_df <- anno_df[which(anno_df$inter_type==datatype), ]
++ 
++ 	count_table <- as.matrix(table(anno_df$sample, anno_df$peak_label))
++ 
++ 	get_frac <- function(x){x / sum(x) * 100}
++ 	frac_mat <- t(apply(count_table, 1, get_frac))
++ 
++ 	df <- as.data.frame(as.table(frac_mat))
++ 	colnames(df) <- c('sample','peak_label','frac')
++ 
++ 	df$sample <- factor(df$sample, levels=sample_list)
++ 	df$peak_label <- factor(df$peak_label, levels=stage_list)
++ 
++ 	print(df)
++ 
++ 	#
++ 	colors <- c(
++ 	brewer.pal(8, 'Dark2')[4],
++ 	brewer.pal(9, 'YlOrRd')[5],
++ 	brewer.pal(9, 'PuBu')[5],
++ 	brewer.pal(9, 'PuBu')[6],
++ 	brewer.pal(9, 'PuBu')[7],
++ 	brewer.pal(9, 'PuBu')[8],
++ 	brewer.pal(9, 'Greys')[6],
++ 	brewer.pal(9, 'Greys')[8]
++ 	)
++ 
++ 	g1 <- ggplot(df) +
++ 	    geom_bar(aes(x=sample, y=frac, fill=peak_label), stat='identity') +
++ 	    scale_fill_manual(values=colors) +
++ 	    labs(x='', y='Composition of stage-specific cREs', main=datatype) +
++ 	    my_theme
++ 
++ 	pdf(paste0('Plots/siginter.', datatype, '.peak_composition.bar.pdf'))
++ 	plot(g1)
++ 	dev.off()
++ }
+[1] "static"
+    sample peak_label      frac
+1     EC12    EarlyEC  5.802003
+2     EC24    EarlyEC  5.730772
+3      EC4    EarlyEC  5.817242
+4     EC48    EarlyEC  5.694702
+5     hESC    EarlyEC  5.590733
+6       ME    EarlyEC  5.887814
+7  nonEC12    EarlyEC  5.833591
+8  nonEC48    EarlyEC  5.745854
+9     EC12     FullEC 14.128546
+10    EC24     FullEC 14.206162
+11     EC4     FullEC 14.145198
+12    EC48     FullEC 14.593347
+13    hESC     FullEC 14.521576
+14      ME     FullEC 14.023738
+15 nonEC12     FullEC 14.070929
+16 nonEC48     FullEC 14.078675
+17    EC12  FullNonEC 14.741144
+18    EC24  FullNonEC 14.667202
+19     EC4  FullNonEC 14.631611
+20    EC48  FullNonEC 14.718634
+21    hESC  FullNonEC 14.355559
+22      ME  FullNonEC 14.484992
+23 nonEC12  FullNonEC 14.829442
+24 nonEC48  FullNonEC 15.365098
+25    EC12       hESC 18.258515
+26    EC24       hESC 18.383369
+27     EC4       hESC 18.439909
+28    EC48       hESC 18.451247
+29    hESC       hESC 20.054252
+30      ME       hESC 18.244147
+31 nonEC12       hESC 18.314048
+32 nonEC48       hESC 18.280731
+33    EC12     LateEC 12.738454
+34    EC24     LateEC 12.829696
+35     EC4     LateEC 12.673715
+36    EC48     LateEC 12.987962
+37    hESC     LateEC 12.971093
+38      ME     LateEC 12.586513
+39 nonEC12     LateEC 12.588908
+40 nonEC48     LateEC 12.647165
+41    EC12   Mesoderm 19.262770
+42    EC24   Mesoderm 19.269696
+43     EC4   Mesoderm 19.409000
+44    EC48   Mesoderm 18.995550
+45    hESC   Mesoderm 18.770335
+46      ME   Mesoderm 20.187589
+47 nonEC12   Mesoderm 19.312013
+48 nonEC48   Mesoderm 18.989083
+49    EC12      MidEC  7.049400
+50    EC24      MidEC  6.960072
+51     EC4      MidEC  6.919142
+52    EC48      MidEC  6.837033
+53    hESC      MidEC  6.456889
+54      ME      MidEC  6.760662
+55 nonEC12      MidEC  6.979521
+56 nonEC48      MidEC  6.913383
+57    EC12   MidNonEC  8.019167
+58    EC24   MidNonEC  7.953031
+59     EC4   MidNonEC  7.964183
+60    EC48   MidNonEC  7.721525
+61    hESC   MidNonEC  7.279564
+62      ME   MidNonEC  7.824544
+63 nonEC12   MidNonEC  8.071548
+64 nonEC48   MidNonEC  7.980011
+[1] "variable"
+    sample peak_label      frac
+1     EC12    EarlyEC  5.785197
+2     EC24    EarlyEC  4.966090
+3      EC4    EarlyEC  7.391682
+4     EC48    EarlyEC  4.891684
+5     hESC    EarlyEC  4.747304
+6       ME    EarlyEC  6.064311
+7  nonEC12    EarlyEC  6.130552
+8  nonEC48    EarlyEC  5.200550
+9     EC12     FullEC 13.311441
+10    EC24     FullEC 16.069927
+11     EC4     FullEC 12.780014
+12    EC48     FullEC 18.315798
+13    hESC     FullEC 13.871855
+14      ME     FullEC 12.574305
+15 nonEC12     FullEC 12.457325
+16 nonEC48     FullEC 12.897208
+17    EC12  FullNonEC 14.913544
+18    EC24  FullNonEC 13.395981
+19     EC4  FullNonEC 13.146703
+20    EC48  FullNonEC 14.457737
+21    hESC  FullNonEC 13.414143
+22      ME  FullNonEC 13.875715
+23 nonEC12  FullNonEC 15.772921
+24 nonEC48  FullNonEC 21.141466
+25    EC12       hESC 17.353708
+26    EC24       hESC 16.935213
+27     EC4       hESC 18.262086
+28    EC48       hESC 18.009154
+29    hESC       hESC 26.843976
+30      ME       hESC 17.476243
+31 nonEC12       hESC 17.277898
+32 nonEC48       hESC 16.727394
+33    EC12     LateEC 12.902447
+34    EC24     LateEC 16.454720
+35     EC4     LateEC 11.502116
+36    EC48     LateEC 14.663683
+37    hESC     LateEC 12.103084
+38      ME     LateEC 11.429901
+39 nonEC12     LateEC 11.188914
+40 nonEC48     LateEC 11.709478
+41    EC12   Mesoderm 18.428886
+42    EC24   Mesoderm 16.855463
+43     EC4   Mesoderm 20.951600
+44    EC48   Mesoderm 16.541226
+45    hESC   Mesoderm 16.873239
+46      ME   Mesoderm 25.189261
+47 nonEC12   Mesoderm 18.651450
+48 nonEC48   Mesoderm 17.022209
+49    EC12      MidEC  8.507015
+50    EC24      MidEC  7.883273
+51     EC4      MidEC  7.283123
+52    EC48      MidEC  6.479475
+53    hESC      MidEC  5.741854
+54      ME      MidEC  6.127348
+55 nonEC12      MidEC  8.358065
+56 nonEC48      MidEC  7.099164
+57    EC12   MidNonEC  8.797764
+58    EC24   MidNonEC  7.439332
+59     EC4   MidNonEC  8.682676
+60    EC48   MidNonEC  6.641243
+61    hESC   MidNonEC  6.404546
+62      ME   MidNonEC  7.262915
+63 nonEC12   MidNonEC 10.162876
+64 nonEC48   MidNonEC  8.202531
+> 
+> 
+> ## log2 enrichment
+> # background
+> data1 <- read.table('anno_res/sig_inter.merged.peak_label.txt', header=T)
+> data1 <- data1[data1$peak_label %in% stage_list, ]
+> bg_table <- table(data1$peak_label) 
+> bg_total <- sum(bg_table)
+> bg_pct <- bg_table/bg_total
+> 
+> #
+> for (datatype in c('static','variable')){
++ 	print(datatype)
++ 
++ 	anno_df <- read.table('anno_res/sig_inter.peak_label.txt', header=T)
++ 	anno_df <- anno_df[anno_df$peak_label %in% stage_list, ]
++ 	anno_df <- anno_df[which(anno_df$inter_type==datatype), ]
++ 
++ 	fc_mat <- NULL
++ 	pval_mat <- NULL
++ 	for (sample in sample_list){
++ 
++ 		tmp_df <- anno_df[which(anno_df$sample==sample), ]
++ 
++ 		test_table <- table(tmp_df$peak_label)
++ 		test_total <- sum(test_table)
++ 		test_pct <- test_table/test_total
++ 
++ 		fc_list <- test_pct/bg_pct
++ 		fc_mat <- rbind(fc_mat, fc_list)
++ 
++ 		pval_vec <- c()
++ 
++ 		#
++ 		for (peak_label in stage_list){
++ 			obs <- test_table[[peak_label]]
++ 			bg <- bg_table[[peak_label]]
++ 
++ 			p <- phyper(q = obs - 1,
++ 			m = bg,
++ 			n = bg_total - bg,
++ 			k = test_total,
++ 			lower.tail = FALSE
++ 			)
++ 
++ 			pval_vec <- c(pval_vec, p)
++ 		}
++ 		pval_mat <- rbind(pval_mat, pval_vec)
++ 	}
++ 
++ 	rownames(fc_mat) <- sample_list
++ 	fc_mat <- fc_mat[, stage_list]
++ 
++ 	rownames(pval_mat) <- sample_list
++ 	colnames(pval_mat) <- stage_list
++ 
++ 	pval_mat[pval_mat==0] <- .Machine$double.xmin
++ 	logP_mat <- -log10(pval_mat)
++ 
++ 	print(fc_mat)
++ 	print(logP_mat)
++ 
++ 
++ 	##
++ 	ncolors <- 100 
++ 	heatmap_colors <- colorRampPalette(c(brewer.pal(9, 'BuPu'), brewer.pal(9, 'BuPu')[9], 'black'))(ncolors)
++ 
++ 	min_val <- 0
++ 	max_val <- 300
++ 	logP_mat[logP_mat < min_val] <- min_val
++ 	logP_mat[logP_mat > max_val] <- max_val
++ 
++ 	pdf(paste0('Plots/siginter.', datatype, '.peak_enrichment.heatmap.pdf'))
++ 	pheatmap(
++ 		logP_mat, color= heatmap_colors,
++ 		cluster_rows=F, cluster_cols=F,
++ 		show_colnames=T, show_rownames=T,
++ 		breaks=seq(min_val, max_val, length.out=ncolors),
++ 		border_color = NA
++ 	)
++ 	dev.off()
++ 
++ }
+[1] "static"
+             hESC  Mesoderm   EarlyEC     MidEC    LateEC    FullEC  MidNonEC
+hESC    1.0645105 0.9933578 0.9922609 0.9184696 1.0255104 1.0324949 0.9271854
+ME      0.9684274 1.0683612 1.0449878 0.9616803 0.9951050 0.9970982 0.9965986
+EC4     0.9788187 1.0271570 1.0324625 0.9842235 1.0019993 1.0057341 1.0143841
+EC12    0.9691901 1.0194183 1.0297578 1.0027523 1.0071177 1.0045502 1.0213873
+EC24    0.9758175 1.0197848 1.0171155 0.9900456 1.0143314 1.0100687 1.0129637
+EC48    0.9794206 1.0052766 1.0107136 0.9725438 1.0268441 1.0375978 0.9834772
+nonEC12 0.9721378 1.0220243 1.0353642 0.9928122 0.9952944 1.0004535 1.0280590
+nonEC48 0.9703693 1.0049343 1.0197923 0.9834043 0.9999003 1.0010043 1.0164001
+        FullNonEC
+hESC    0.9547079
+ME      0.9633159
+EC4     0.9730666
+EC12    0.9803511
+EC24    0.9754336
+EC48    0.9788540
+nonEC12 0.9862233
+nonEC48 1.0218467
+                hESC     Mesoderm    EarlyEC        MidEC      LateEC
+hESC    1.132302e+02 4.058059e-03  0.0372391 0.000000e+00 12.19184581
+ME      0.000000e+00 1.455215e+02 17.3088977 0.000000e+00  0.03232986
+EC4     0.000000e+00 2.677849e+01 10.4807314 7.146604e-05  0.57565404
+EC12    0.000000e+00 1.357683e+01  8.5521575 5.647614e-01  1.82868161
+EC24    0.000000e+00 1.473272e+01  3.5387773 5.160821e-03  5.45090766
+EC48    7.714620e-16 1.658827e+00  1.7150402 4.245701e-10 15.46497169
+nonEC12 0.000000e+00 1.722902e+01 11.7109409 2.459594e-02  0.03339038
+nonEC48 0.000000e+00 1.484105e+00  4.0251502 8.628871e-05  0.29017516
+             FullEC     MidNonEC    FullNonEC
+hESC    21.41805614 0.000000e+00 0.000000e+00
+ME       0.08518165 1.064104e-01 0.000000e+00
+EC4      1.55465570 3.569463e+00 0.000000e+00
+EC12     1.15635504 6.560172e+00 5.921115e-12
+EC24     3.40198903 3.036754e+00 0.000000e+00
+EC48    32.81485273 2.776994e-05 3.513045e-13
+nonEC12  0.35449721 1.063996e+01 6.216143e-07
+nonEC48  0.42317121 3.963018e+00 1.220413e+01
+[1] "variable"
+             hESC  Mesoderm   EarlyEC     MidEC    LateEC    FullEC  MidNonEC
+hESC    1.4249195 0.8929603 0.8425665 0.8167584 0.9568845 0.9862992 0.8157358
+ME      0.9276658 1.3330582 1.0763130 0.8715937 0.9036619 0.8940425 0.9250649
+EC4     0.9693796 1.1087940 1.3118991 1.0359985 0.9093713 0.9086685 1.1058973
+EC12    0.9211615 0.9752877 1.0267750 1.2100928 1.0200831 0.9464533 1.1205559
+EC24    0.8989472 0.8920196 0.8813973 1.1213677 1.3009302 1.1425838 0.9475348
+EC48    0.9559536 0.8753896 0.8681915 0.9216825 1.1593286 1.3022668 0.8458835
+nonEC12 0.9171374 0.9870662 1.0880697 1.1889052 0.8846091 0.8857251 1.2944278
+nonEC48 0.8879158 0.9008440 0.9230101 1.0098310 0.9257656 0.9170011 1.0447421
+        FullNonEC
+hESC    0.8920997
+ME      0.9227962
+EC4     0.8743137
+EC12    0.9918164
+EC24    0.8908918
+EC48    0.9615033
+nonEC12 1.0489688
+nonEC48 1.4060007
+            hESC     Mesoderm   EarlyEC      MidEC     LateEC       FullEC
+hESC    307.6527 0.000000e+00   0.00000   0.000000   0.000000 1.961870e-04
+ME        0.0000 3.076527e+02  33.23446   0.000000   0.000000 0.000000e+00
+EC4       0.0000 2.085809e+02 307.65266   8.605790   0.000000 0.000000e+00
+EC12      0.0000 1.157193e-14   4.68318 276.023365   6.088333 0.000000e+00
+EC24      0.0000 0.000000e+00   0.00000  88.374694 307.652656 2.605391e+02
+EC48      0.0000 0.000000e+00   0.00000   0.000000 294.651197 3.076527e+02
+nonEC12   0.0000 1.387491e-05  41.79544 231.810550   0.000000 0.000000e+00
+nonEC48   0.0000 0.000000e+00   0.00000   1.382993   0.000000 0.000000e+00
+         MidNonEC    FullNonEC
+hESC      0.00000 0.000000e+00
+ME        0.00000 0.000000e+00
+EC4      73.00997 0.000000e+00
+EC12    105.32329 6.567865e-03
+EC24      0.00000 0.000000e+00
+EC48      0.00000 0.000000e+00
+nonEC12 307.65266 3.879291e+01
+nonEC48  16.50307 3.076527e+02
+> 
+> 
+> ##================================================================================================
+> ## sig inter dist boxplot
+> 
+> ## by sample
+> df <- NULL
+> for (sample in sample_list){
++         print(sample)
++ 
++         data <- read.table(paste0('res_fithic/', sample, '.', resolution, '.sig_inter.filtered.txt'), header=T)
++         tmp_df <- data.frame(sample=sample, dist=data$dist)
++ 
++         df <- rbind(df, tmp_df)
++ }
+[1] "hESC"
+[1] "ME"
+[1] "EC4"
+[1] "EC12"
+[1] "EC24"
+[1] "EC48"
+[1] "nonEC12"
+[1] "nonEC48"
+> df$sample <- factor(df$sample, levels=sample_list)
+> 
+> #
+> my_theme <- theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
++         theme(panel.background = element_rect(fill='white', color='black', linetype='solid')) +
++         theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
++         theme(legend.position='bottom')
+> 
+> p1 <- ggplot(df) +
++         geom_boxplot(aes(x=sample, y=dist), notch=T, outlier.shape=NA, width=0.9) +
++         ylim(0, 1200000) +
++         labs(x=NULL, y='Distance for significant interactions') +
++         my_theme
+> 
+> pdf('Plots/siginter.dist.by_sample.box.pdf')
+> plot(p1)
+> dev.off()
+null device 
+          1 
+> 
+> 
+> ## merged siginter
+> data1 <- read.table('res_fithic/siginter.20kb.merged.txt', header=T)
+> 
+> pdf('Plots/siginter.dist.merged.hist.pdf')
+> hist(data1$dist, breaks=50, freq=F, col='lightblue', xlab='Distance (bp)', main=NULL )
+> lines(density(data1$dist, adjust=10), col='navy', lwd=2)
+> abline(v=mean(data1$dist), col='darkgrey', lwd=2, lty='dashed')
+> dev.off()
+null device 
+          1 
+> 
+> print(mean(data1$dist))
+[1] 328796.2
+> 
+> # static vs variable
+> point_df <- data.frame(group=c('static','variable'), vals=c(mean(data1$dist[which(data1$inter_type=='static')]), mean(data1$dist[which(data1$inter_type=='variable')]))) 
+> 
+> p1 <- ggplot() +
++ 	geom_violin(aes(x=data1$inter_type, y=data1$dist), trim=F, scale='width', width=0.9) +
++ 	geom_point(aes(x=point_df$group, y=point_df$vals), shape=13, col='black', size=5) +
++         ylim(0, 1200000) +
++         labs(x=NULL, y='Distance for significant interactions') +
++         my_theme
+> 
+> pdf('Plots/siginter.dist.inter_type.box.pdf')
+> plot(p1)
+Warning message:
+Removed 30 rows containing missing values (`geom_violin()`). 
+> dev.off()
+null device 
+          1 
+> 
+> 
+> # inter class
+> data1 <- read.table('res_fithic/siginter.20kb.merged.anno.txt', header=T)
+> data1$inter_class <- factor(data1$inter_class, levels=c('peak_prom', 'peak_none', 'none_none'))
+> 
+> point_df <- data.frame(group=c('peak_prom', 'peak_none', 'none_none'), vals=c(mean(data1$dist[which(data1$inter_class=='peak_prom')]), mean(data1$dist[which(data1$inter_class=='peak_none')]), mean(data1$dist[which(data1$inter_class=='none_none')]))) 
+> 
+> p1 <- ggplot() +
++ 	geom_violin(aes(x=data1$inter_class, y=data1$dist), trim=F, scale='width', width=0.9) +
++ 	geom_point(aes(x=point_df$group, y=point_df$vals), shape=13, col='black', size=5) +
++         ylim(0, 1200000) +
++         labs(x=NULL, y='Distance for significant interactions') +
++         my_theme
+> 
+> pdf('Plots/siginter.dist.inter_class.box.pdf')
+> plot(p1)
+Warning message:
+Removed 48 rows containing missing values (`geom_violin()`). 
+> dev.off()
+null device 
+          1 
+> 
+> 
+> ##================================================================================================
+> ## rna correlation by number of promoter-centered siginter
+> 
+> data1 <- read.table('anno_res/sig_inter_count.per_gene.txt', header=T)
+> 
+> ##
+> hesc_0 <- data1$log2tpm[which(data1$sample=='hESC' & data1$prom_siginter==0)]
+> hesc_1 <- data1$log2tpm[which(data1$sample=='hESC' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> hesc_4 <- data1$log2tpm[which(data1$sample=='hESC' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> hesc_7 <- data1$log2tpm[which(data1$sample=='hESC' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> hesc_10 <- data1$log2tpm[which(data1$sample=='hESC' & data1$prom_siginter>=10)]
+> 
+> me_0 <- data1$log2tpm[which(data1$sample=='ME' & data1$prom_siginter==0)]
+> me_1 <- data1$log2tpm[which(data1$sample=='ME' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> me_4 <- data1$log2tpm[which(data1$sample=='ME' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> me_7 <- data1$log2tpm[which(data1$sample=='ME' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> me_10 <- data1$log2tpm[which(data1$sample=='ME' & data1$prom_siginter>=10)]
+> 
+> ec4_0 <- data1$log2tpm[which(data1$sample=='EC4' & data1$prom_siginter==0)]
+> ec4_1 <- data1$log2tpm[which(data1$sample=='EC4' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> ec4_4 <- data1$log2tpm[which(data1$sample=='EC4' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> ec4_7 <- data1$log2tpm[which(data1$sample=='EC4' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> ec4_10 <- data1$log2tpm[which(data1$sample=='EC4' & data1$prom_siginter>=10)]
+> 
+> ec12_0 <- data1$log2tpm[which(data1$sample=='EC12' & data1$prom_siginter==0)]
+> ec12_1 <- data1$log2tpm[which(data1$sample=='EC12' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> ec12_4 <- data1$log2tpm[which(data1$sample=='EC12' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> ec12_7 <- data1$log2tpm[which(data1$sample=='EC12' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> ec12_10 <- data1$log2tpm[which(data1$sample=='EC12' & data1$prom_siginter>=10)]
+> 
+> ec24_0 <- data1$log2tpm[which(data1$sample=='EC24' & data1$prom_siginter==0)]
+> ec24_1 <- data1$log2tpm[which(data1$sample=='EC24' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> ec24_4 <- data1$log2tpm[which(data1$sample=='EC24' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> ec24_7 <- data1$log2tpm[which(data1$sample=='EC24' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> ec24_10 <- data1$log2tpm[which(data1$sample=='EC24' & data1$prom_siginter>=10)]
+> 
+> ec48_0 <- data1$log2tpm[which(data1$sample=='EC48' & data1$prom_siginter==0)]
+> ec48_1 <- data1$log2tpm[which(data1$sample=='EC48' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> ec48_4 <- data1$log2tpm[which(data1$sample=='EC48' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> ec48_7 <- data1$log2tpm[which(data1$sample=='EC48' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> ec48_10 <- data1$log2tpm[which(data1$sample=='EC48' & data1$prom_siginter>=10)]
+> 
+> nonec12_0 <- data1$log2tpm[which(data1$sample=='nonEC12' & data1$prom_siginter==0)]
+> nonec12_1 <- data1$log2tpm[which(data1$sample=='nonEC12' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> nonec12_4 <- data1$log2tpm[which(data1$sample=='nonEC12' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> nonec12_7 <- data1$log2tpm[which(data1$sample=='nonEC12' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> nonec12_10 <- data1$log2tpm[which(data1$sample=='nonEC12' & data1$prom_siginter>=10)]
+> 
+> nonec48_0 <- data1$log2tpm[which(data1$sample=='nonEC48' & data1$prom_siginter==0)]
+> nonec48_1 <- data1$log2tpm[which(data1$sample=='nonEC48' & data1$prom_siginter>=1 & data1$prom_siginter<4)]
+> nonec48_4 <- data1$log2tpm[which(data1$sample=='nonEC48' & data1$prom_siginter>=4 & data1$prom_siginter<7)]
+> nonec48_7 <- data1$log2tpm[which(data1$sample=='nonEC48' & data1$prom_siginter>=7 & data1$prom_siginter<10)]
+> nonec48_10 <- data1$log2tpm[which(data1$sample=='nonEC48' & data1$prom_siginter>=10)]
+> 
+> ##
+> pdf('Plots/siginter.log2tpm_rna.box.pdf', height=4, width=12, pointsize=3)
+> boxplot(
++ hesc_0,hesc_1,hesc_4,hesc_7,hesc_10,
++ me_0,me_1,me_4,me_7,me_10,
++ ec4_0,ec4_1,ec4_4,ec4_7,ec4_10,
++ ec12_0,ec12_1,ec12_4,ec12_7,ec12_10,
++ ec24_0,ec24_1,ec24_4,ec24_7,ec24_10,
++ ec48_0,ec48_1,ec48_4,ec48_7,ec48_10,
++ nonec12_0,nonec12_1,nonec12_4,nonec12_7,nonec12_10,
++ nonec48_0,nonec48_1,nonec48_4,nonec48_7,nonec48_10,
++ names=c(
++ 'hesc_0','hesc_1','hesc_4','hesc_7','hesc_10',
++ 'me_0','me_1','me_4','me_7','me_10',
++ 'ec4_0','ec4_1','ec4_4','ec4_7','ec4_10',
++ 'ec12_0','ec12_1','ec12_4','ec12_7','ec12_10',
++ 'ec24_0','ec24_1','ec24_4','ec24_7','ec24_10',
++ 'ec48_0','ec48_1','ec48_4','ec48_7','ec48_10',
++ 'nonec12_0','nonec12_1','nonec12_4','nonec12_7','nonec12_10',
++ 'nonec48_0','nonec48_1','nonec48_4','nonec48_7','nonec48_10'
++ ),
++ outline=F,notch=T, las=2,
++ xlab='Number of P-cRE interactions', ylab='RNA log2TPM'
++ )
+> dev.off()
+null device 
+          1 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> proc.time()
+   user  system elapsed 
+152.082   6.342 155.912 
