@@ -1,6 +1,10 @@
 # GEM-Finder
 Framework briefing. Also contain permutation test scripts.
 
+Note
+----
+Annotating Hi-C interaction was processed under python2, and handling them was processed under python3. We will modify python2 scripts. 
+
 script accessibility
 --------------------
 download the scripts. Overall directory structure should be fixed when you use GEM-Finder.
