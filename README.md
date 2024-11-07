@@ -19,13 +19,15 @@ processing
 ----------
 1. Hi-C proecssing
 Bam file - bam2inter.py -> interaction file
-''''python
+
+''''python3
 chr1    chr1.0.20000    10000   0
 chr1    chr1.20000.40000        30000   0
 chr1    chr1.40000.60000        50000   0
 chr1    chr1.60000.80000        70000   0
 chr1    chr1.80000.100000       90000   0
 ''''
+
 interaction hit
 
    chr3    175850000       chr3    176150000       13
