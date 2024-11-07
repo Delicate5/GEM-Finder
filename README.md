@@ -103,8 +103,10 @@ chr1.121260000.121280000-chr1.121480000.121500000       f       chr1.121260000.1
 
 requirement-DEG linked CRE selection
 ------------------------------------
-Overall workflow-DEG linked CRE selection
------------------------------------------
+1) DEG lists of individal targets
+2) TSS/CRE annotated interaction
+
+By run DEG_contact_enhanceR_finder() and sorting, new CRE sets are formed in bedfile formats
 
 References
 ----------
