@@ -19,7 +19,7 @@ processing
 ----------
 1. Hi-C proecssing
 Bam file - bam2inter.py -> interaction file
-''''interaction map
+''''txt
 chr1    chr1.0.20000    10000   0
 chr1    chr1.20000.40000        30000   0
 chr1    chr1.40000.60000        50000   0
